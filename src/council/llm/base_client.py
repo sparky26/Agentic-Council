@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Iterator, Literal, Optional
 
+
 Role = Literal["system", "user", "assistant"]
 
 
@@ -12,18 +13,17 @@ class ChatMessage:
     """
     Simple chat message model, independent of any specific LLM provider.
     """
-
     role: Role
     content: str
 
 
-class LLMClient(ABC):
-    """
-    Abstract interface for any chat-based LLM client.
+    class LLMClient(ABC):
+        """
+        Abstract interface for any chat-based LLM client.
 
-    Agents and orchestrators should depend on this interface, not on
-    provider-specific SDKs.
-    """
+        Agents and orchestrators should depend on this interface, not on
+        provider-specific SDKs.
+        """
 
     @abstractmethod
     def complete(
