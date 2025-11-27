@@ -14,10 +14,10 @@ class ModelConfig:
     """
     Configuration for a single LLM model.
 
-    This is intentionally generic so it can be used for Groq models or others.
+    This is intentionally generic so it can be used for Ollama-hosted models or others.
     """
     name: str
-    max_completion_tokens: int = 1024
+    max_completion_tokens: Optional[int] = None
     temperature: float = 0.7
     top_p: float = 1.0
     reasoning_effort: Optional[str] = None  # e.g. "medium"
@@ -32,11 +32,11 @@ class Settings:
     """
     Application-wide configuration for the Council.
 
-    This should not depend on any Groq SDK imports. It only stores data.
+    This should not depend on any Ollama SDK imports. It only stores data.
     """
 
-    # --- Secrets & credentials ---
-    groq_api_key: str
+    # --- LLM host configuration ---
+    ollama_host: str
 
     # --- Model choices ---
     default_model_alias: str
@@ -53,16 +53,11 @@ class Settings:
         """
         Build settings from environment variables.
 
-        - GROQ_API_KEY        : required
+        - OLLAMA_HOST         : optional (defaults to http://localhost:11434)
         - COUNCIL_DEBUG       : optional ("1"/"true" to enable)
         - COUNCIL_DEFAULT_MODEL_ALIAS : optional override for default model alias
         """
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "GROQ_API_KEY is not set. "
-                "Please set it in your environment or .env file."
-            )
+        ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
         debug_env = os.getenv("COUNCIL_DEBUG", "").lower()
         debug = debug_env in {"1", "true", "yes", "on"}
@@ -70,18 +65,8 @@ class Settings:
         # You can add more models here later if you want.
         models: Dict[str, ModelConfig] = {
             # High-capacity, long outputs model:
-            "gpt_oss_120b": ModelConfig(
-                name="openai/gpt-oss-120b",
-                max_completion_tokens=1024,
-                temperature=1.0,
-                top_p=1.0,
-                reasoning_effort="medium",
-                stream=True,
-            ),
-            # Faster, smaller model:
-            "llama_4_scout_17b": ModelConfig(
-                name="meta-llama/llama-4-scout-17b-16e-instruct",
-                max_completion_tokens=1024,
+            "gpt_oss_latest": ModelConfig(
+                name="gpt-oss:latest",
                 temperature=1.0,
                 top_p=1.0,
                 stream=True,
@@ -90,7 +75,7 @@ class Settings:
 
         default_model_alias = os.getenv(
             "COUNCIL_DEFAULT_MODEL_ALIAS",
-            "gpt_oss_120b",  # sensible default for deeper debates
+            "gpt_oss_latest",  # sensible default for local debates
         )
 
         # Roles are kept as plain strings – we’ll use them to map to prompts/agents.
@@ -103,7 +88,7 @@ class Settings:
         ]
 
         return cls(
-            groq_api_key=api_key,
+            ollama_host=ollama_host,
             default_model_alias=default_model_alias,
             models=models,
             council_roles=council_roles,
