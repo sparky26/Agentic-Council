@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Iterator, Literal, Optional
 
-
 Role = Literal["system", "user", "assistant"]
 
 
@@ -13,6 +12,7 @@ class ChatMessage:
     """
     Simple chat message model, independent of any specific LLM provider.
     """
+
     role: Role
     content: str
 
@@ -21,8 +21,8 @@ class LLMClient(ABC):
     """
     Abstract interface for any chat-based LLM client.
 
-    Agents and orchestrators should depend on this interface, not on Groq
-    or any other concrete SDK.
+    Agents and orchestrators should depend on this interface, not on
+    provider-specific SDKs.
     """
 
     @abstractmethod
@@ -38,8 +38,8 @@ class LLMClient(ABC):
 
         Returns the full assistant message content as a single string.
 
-        `model_alias` is a logical key (e.g. "gpt_oss_120b", "llama_4_scout_17b")
-        that the concrete client maps to provider-specific model names.
+        `model_alias` is a logical key (e.g. "gpt_oss_latest") that the
+        concrete client maps to provider-specific model names.
         `overrides` can be used for per-call settings like temperature, etc.
         """
         raise NotImplementedError
