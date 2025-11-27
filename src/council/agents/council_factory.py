@@ -27,16 +27,11 @@ _ROLE_TO_AGENT_CLS: Dict[str, Type[BaseAgent]] = {
 # These aliases must exist in Settings.models; otherwise we'll fall back
 # to the global default model.
 _ROLE_MODEL_DEFAULTS: Dict[str, str] = {
-    # heavier model for deep historical reasoning:
-    "indian_historian": "gpt_oss_120b",
-    "civilizational_historian": "gpt_oss_120b",
-
-    # mix in the smaller model to diversify style:
-    "religion_expert": "llama_4_scout_17b",
-    "anthropology_expert": "llama_4_scout_17b",
-
-    # you can choose either; here we keep a mix:
-    "policymaker_expert": "gpt_oss_120b",
+    "indian_historian": "gpt_oss_latest",
+    "civilizational_historian": "gpt_oss_latest",
+    "religion_expert": "gpt_oss_latest",
+    "anthropology_expert": "gpt_oss_latest",
+    "policymaker_expert": "gpt_oss_latest",
 }
 
 
