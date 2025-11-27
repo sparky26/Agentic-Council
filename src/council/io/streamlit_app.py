@@ -115,6 +115,12 @@ st.markdown(
         .timeline-speaker { font-size: 1.05rem; font-weight: 700; }
         .expert-card {border: 1px solid #1f2937; border-radius: 14px; padding: 0.8rem; background:#0f172a;}
         .expert-card h3 {margin-bottom: 0.2rem; color: #e2e8f0;}
+        .expert-card img {border-radius: 10px; max-height: 170px; object-fit: cover;}
+        .timeline-chip {display:inline-block; padding:0.15rem 0.45rem; border-radius:999px; font-size:0.78rem; background:#1e293b; border:1px solid #334155; margin-right:0.35rem; color:#cbd5e1;}
+        .timeline-card details {margin-top:0.35rem;}
+        .timeline-card summary {cursor:pointer; font-weight:600; color:#c7d2fe;}
+        .timeline-card .preview {color:#cbd5e1; line-height:1.5;}
+        .timeline-card .full {margin-top:0.35rem; white-space:pre-wrap; line-height:1.5; color:#e2e8f0;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -284,17 +290,34 @@ def _render_timeline(
     messages: List[DebateMessage],
     *,
     total_agents: int,
+    stage_filter: str,
+    preview_chars: int = 360,
 ) -> None:
     cards: List[str] = []
     for msg in messages:
+        if stage_filter == "Opening only" and msg.stage != DebateStage.OPENING:
+            continue
+        if stage_filter == "Rebuttals only" and msg.stage != DebateStage.REBUTTAL:
+            continue
+
         stage_class = "opening" if msg.stage == DebateStage.OPENING else "rebuttal"
         stage_text = _stage_label(msg, total_agents=total_agents)
+        chip = "Opening" if msg.stage == DebateStage.OPENING else "Rebuttal"
+        preview = msg.content.replace("\n", " ").strip()
+        preview = (preview[: preview_chars] + "…") if len(preview) > preview_chars else preview
         cards.append(
             f"""
             <div class="timeline-card {stage_class}">
                 <div class="timeline-speaker">{msg.speaker_name}</div>
-                <div class="timeline-meta">{stage_text} • Stage: {msg.stage.value.title()}</div>
-                <div style="margin-top:0.35rem; white-space:pre-wrap; line-height:1.5;">{msg.content}</div>
+                <div class="timeline-meta">
+                    <span class="timeline-chip">{chip}</span>
+                    {stage_text} • Stage: {msg.stage.value.title()}
+                </div>
+                <details>
+                    <summary>Expand to view full response</summary>
+                    <div class="preview">{preview}</div>
+                    <div class="full">{msg.content}</div>
+                </details>
             </div>
             """
         )
@@ -314,8 +337,20 @@ timeline_tab, experts_tab = st.tabs(["🧭 Debate map", "👥 Expert dashboards"
 
 with timeline_tab:
     st.caption("See every turn with stage labels and counters. Scroll inside the map, not the whole page.")
+    stage_filter = st.radio(
+        "Timeline filter",
+        options=["All stages", "Opening only", "Rebuttals only"],
+        index=0,
+        horizontal=True,
+        help="Filter the map to just openings or rebuttals to cut down visual noise.",
+    )
     timeline_placeholder = st.container()
-    _render_timeline(timeline_placeholder, [], total_agents=len(council))
+    _render_timeline(
+        timeline_placeholder,
+        [],
+        total_agents=len(council),
+        stage_filter=stage_filter,
+    )
 
 with experts_tab:
     expert_placeholders = build_expert_layout(council)
@@ -451,6 +486,7 @@ def run_live_debate(
             timeline_placeholder,
             transcript.messages,
             total_agents=total_agents,
+            stage_filter=stage_filter,
         )
         round_index += 1
 
@@ -494,6 +530,7 @@ def run_live_debate(
                 timeline_placeholder,
                 transcript.messages,
                 total_agents=total_agents,
+                stage_filter=stage_filter,
             )
             round_index += 1
 
@@ -541,6 +578,7 @@ elif st.session_state.get("latest_result") is not None:
         timeline_placeholder,
         result.transcript.messages,
         total_agents=len(council),
+        stage_filter=stage_filter,
     )
     with consensus_placeholder:
         st.markdown("### 🧾 Council Consensus (last run)")
