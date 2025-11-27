@@ -4,7 +4,7 @@ The **Council of Experts** is a custom-built multi-agent debate engine designed 
 
 It uses:
 
-- **Groq LLMs** for ultra-fast streaming responses  
+- **Ollama** with the `gpt-oss:latest` model for local, streaming responses
 - A set of **specialized agents**  
 - A structured **debate → rebuttal → consensus** protocol  
 - A **Streamlit UI** that streams expert messages live  
@@ -81,7 +81,7 @@ src/
       ├── config/               # Settings, prompts
       ├── debate/               # Debate protocol + consensus logic
       ├── io/                   # Streamlit UI + persistence
-      ├── llm/                  # Groq client wrapper
+      ├── llm/                  # Ollama client wrapper
       └── utils/                # Helpers
 ```
 
@@ -103,8 +103,8 @@ The interface shows:
 Environment variables via `.env`:
 
 ```
-GROQ_API_KEY=your_real_key
-COUNCIL_DEFAULT_MODEL_ALIAS=llama_4_scout_17b
+OLLAMA_HOST=http://localhost:11434
+COUNCIL_DEFAULT_MODEL_ALIAS=gpt_oss_latest
 ```
 
 ---
@@ -135,11 +135,11 @@ including:
 
 ## 🧩 Token Safety Mechanisms
 
-To avoid Groq 413 errors:
-- Sliding-window transcripts  
-- Truncated consensus transcript  
-- Lower `max_completion_tokens`  
-- Model-specific token budgeting  
+To avoid overrunning context limits:
+- Sliding-window transcripts
+- Truncated consensus transcript
+- Lower `max_completion_tokens`
+- Model-specific token budgeting
 
 ---
 

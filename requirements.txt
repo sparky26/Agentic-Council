@@ -1,5 +1,5 @@
 streamlit
-groq
+ollama
 python-dotenv
 pydantic
 dataclasses-json
