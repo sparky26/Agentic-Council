@@ -2,6 +2,7 @@ from __future__ import annotations
 # --- make 'src' importable so 'import council' works ---
 import sys
 from pathlib import Path
+import base64
 
 # This file is: .../Agentic council/src/council/io/streamlit_app.py
 # We want to add: .../Agentic council/src  to sys.path
@@ -63,6 +64,13 @@ def _role_to_image_path() -> Dict[str, Path]:
     }
 
 
+def _encode_image(path: Path | None) -> str | None:
+    if path is None or not path.exists():
+        return None
+
+    return base64.b64encode(path.read_bytes()).decode("utf-8")
+
+
 # ---- Streamlit page setup ---------------------------------------------------
 
 
@@ -113,14 +121,24 @@ st.markdown(
         .timeline-card.opening { border-left-color: #22c55e; }
         .timeline-meta { font-size: 0.9rem; color: #cbd5e1; }
         .timeline-speaker { font-size: 1.05rem; font-weight: 700; }
-        .expert-card {border: 1px solid #1f2937; border-radius: 14px; padding: 0.8rem; background:#0f172a;}
-        .expert-card h3 {margin-bottom: 0.2rem; color: #e2e8f0;}
-        .expert-card img {border-radius: 10px; max-height: 170px; object-fit: cover;}
         .timeline-chip {display:inline-block; padding:0.15rem 0.45rem; border-radius:999px; font-size:0.78rem; background:#1e293b; border:1px solid #334155; margin-right:0.35rem; color:#cbd5e1;}
         .timeline-card details {margin-top:0.35rem;}
         .timeline-card summary {cursor:pointer; font-weight:600; color:#c7d2fe;}
         .timeline-card .preview {color:#cbd5e1; line-height:1.5;}
         .timeline-card .full {margin-top:0.35rem; white-space:pre-wrap; line-height:1.5; color:#e2e8f0;}
+        /* Expert dashboards */
+        .experts-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;}
+        .expert-card {border: 1px solid #1f2937; border-radius: 14px; padding: 0.85rem; background:#0f172a; box-shadow: 0 10px 24px rgba(0,0,0,0.2);}
+        .expert-header {display:flex; gap:0.75rem; align-items:center;}
+        .expert-avatar {width:90px; height:90px; border-radius:12px; overflow:hidden; border:1px solid #233044; background:#111827; flex-shrink:0;}
+        .expert-avatar img {width:100%; height:100%; object-fit:cover; display:block;}
+        .avatar-missing {display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:#94a3b8; font-size:0.82rem;}
+        .expert-name {font-weight:700; font-size:1.05rem; margin-bottom:0.1rem; color:#e2e8f0;}
+        .expert-role {color:#cbd5e1; font-size:0.9rem;}
+        .expert-tags {margin-top:0.35rem; display:flex; flex-wrap:wrap; gap:0.4rem;}
+        .expert-tag {padding:0.2rem 0.55rem; border-radius:999px; background:#1e293b; border:1px solid #334155; color:#cbd5e1; font-size:0.78rem; letter-spacing:0.01em;}
+        .expert-body {margin-top:0.65rem; border:1px solid #1f2937; border-radius:12px; background:#0b1221; padding:0.6rem;}
+        .expert-stream {white-space: pre-wrap; font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; font-size: 0.92rem; border: 1px solid #233044; padding: 0.55rem; border-radius: 10px; max-height: 360px; overflow-y: auto; line-height: 1.55; background: #0f172a; color: #e2e8f0;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -231,25 +249,41 @@ def build_expert_layout(council: List[BaseAgent]):
     """
     images = _role_to_image_path()
     text_placeholders: Dict[str, st.delta_generator.DeltaGenerator] = {}
-    cols = st.columns(2)
+    cols = st.columns(3 if len(council) >= 4 else 2)
     for idx, agent in enumerate(council):
-        with cols[idx % 2]:
+        with cols[idx % len(cols)]:
             with st.container():
                 st.markdown('<div class="expert-card">', unsafe_allow_html=True)
 
                 img_path = images.get(agent.role_id)
-                if img_path and img_path.exists():
-                    st.image(str(img_path), use_column_width=True)
-                else:
-                    st.write("🔲 (image missing)")
+                encoded = _encode_image(img_path)
+                avatar_markup = (
+                    f'<img src="data:image/png;base64,{encoded}" alt="{agent.name} portrait" />'
+                    if encoded
+                    else '<span class="avatar-missing">No portrait</span>'
+                )
 
-                st.markdown(f"<h3>{agent.name}</h3>", unsafe_allow_html=True)
-                st.caption(f"Role ID: `{agent.role_id}`")
+                st.markdown(
+                    f"""
+                    <div class="expert-header">
+                        <div class="expert-avatar">{avatar_markup}</div>
+                        <div class="expert-meta">
+                            <div class="expert-name">{agent.name}</div>
+                            <div class="expert-role">{agent.role_id.replace('_', ' ').title()}</div>
+                            <div class="expert-tags">
+                                <span class="expert-tag">Live stream</span>
+                                <span class="expert-tag">Readable updates</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="expert-body">
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                # Placeholder where we'll render the live text
                 text_placeholders[agent.role_id] = st.empty()
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div></div>', unsafe_allow_html=True)
 
     return text_placeholders
 
@@ -258,18 +292,7 @@ def _render_buffer_in_placeholder(placeholder, buffer: str) -> None:
     """Render a scrollable box with the expert's text."""
     placeholder.markdown(
         f"""
-<div style="
-    white-space: pre-wrap;
-    font-family: monospace;
-    font-size: 0.9rem;
-    border: 1px solid #444;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    max-height: 480px;
-    overflow-y: auto;
-">
-{buffer}
-</div>
+        <div class="expert-stream">{buffer}</div>
         """,
         unsafe_allow_html=True,
     )
@@ -353,6 +376,7 @@ with timeline_tab:
     )
 
 with experts_tab:
+    st.caption("Compact expert dashboards with right-sized portraits and contained live transcripts.")
     expert_placeholders = build_expert_layout(council)
 
 status_placeholder = st.empty()
