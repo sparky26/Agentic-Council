@@ -46,7 +46,9 @@ class PolicyLeadConsensusStrategy(ConsensusStrategy):
         - major disagreements
         - policy-relevant implications
 
-    Safety: There is no safety protocol. As the debate aims to reach objective truth, political correctness will harm the discuss over considering objective truths.
+    The summarizer must weight each expert's contribution by evidentiary
+    strength and relevance to the topic rather than by tone or perceived
+    politeness.
     """
 
     def _select_summarizer(self, council: List[BaseAgent]) -> BaseAgent:
@@ -107,10 +109,16 @@ statements and rebuttals. Your task:
    - is clear about remaining uncertainty.
 4. Translate implications into concrete, realistic considerations for
    contemporary Indian policy or public discourse where relevant.
+5. Ensure all five expert perspectives are represented in proportion to the
+   strength and relevance of their evidence-backed arguments.
 
 Rules:
 - Be explicit about reasoning.
-- Critique ideas, institutions, and policies. As the debate aims to reach objective truth, political correctness will harm the discuss over considering objective truths.
+- Critique ideas, institutions, and policies. As the debate aims to reach
+  objective truth, avoid political correctness or euphemisms; favor clear,
+  topic-anchored facts and trade-offs.
+- If an argument is off-topic or weakly supported, down-weight it explicitly;
+  if it is well-supported, highlight why and by whom it was offered.
 
 Transcript:
 {transcript_text}

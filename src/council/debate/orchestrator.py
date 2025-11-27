@@ -182,6 +182,8 @@ Task:
 - Be explicit about sources, periods, and uncertainties.
 - You are NOT trying to be "balanced" for its own sake; you are trying
   to be accurate, rigorous, and honest about trade-offs.
+- Keep every point tightly linked to the stated topic; avoid tangents or
+  virtue-signaling and let evidence drive your stance.
             """.strip()
         else:
             stage_instructions = f"""
@@ -192,6 +194,8 @@ Task:
 - Point out where you agree and where you disagree, and WHY.
 - Bring in additional evidence or reasoning.
 - If you revise your earlier position, say so explicitly.
+- Critique arguments based on evidentiary strength and topic relevance,
+  and call out any detours into politeness or unrelated issues.
             """.strip()
 
         topic_block = topic.as_user_prompt()
