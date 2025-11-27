@@ -71,16 +71,69 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🧠 Council of Experts – Live Debate on India")
+st.markdown(
+    """
+    <style>
+        /* Global polish */
+        .main, .block-container {padding-top: 1rem;}
+        .debate-hero {
+            background: linear-gradient(120deg, #0d1b2a, #1b263b 50%, #415a77);
+            color: #e0e7ff;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        .pill {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            margin-right: 0.4rem;
+        }
+        .timeline-wrapper {
+            max-height: 620px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+        .timeline-card {
+            border: 1px solid #e5e7eb;
+            border-left: 6px solid #6366f1;
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 0.8rem;
+            background: #0b1221;
+            color: #e5e7eb;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+        }
+        .timeline-card.rebuttal { border-left-color: #f59e0b; }
+        .timeline-card.opening { border-left-color: #22c55e; }
+        .timeline-meta { font-size: 0.9rem; color: #cbd5e1; }
+        .timeline-speaker { font-size: 1.05rem; font-weight: 700; }
+        .expert-card {border: 1px solid #1f2937; border-radius: 14px; padding: 0.8rem; background:#0f172a;}
+        .expert-card h3 {margin-bottom: 0.2rem; color: #e2e8f0;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.markdown(
     """
-This interface runs a **live multi-agent debate** on a topic related to India.
-
-- Each expert has their own panel (historian, civilizational historian, religion expert, anthropology expert, policymaker).
-- The dialogue streams live under each expert image.
-- At the end, the policymaker (by default) synthesizes a **Council Consensus**.
-"""
+    <div class="debate-hero">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <span style="font-size:2rem;">🧠</span>
+            <div>
+                <div class="pill">Live multi-agent council</div>
+                <h1 style="margin:0;">Council of Experts – India Debate Lab</h1>
+                <p style="margin:0.2rem 0 0;opacity:0.9;">Track openings, rebuttals, and counters at a glance — no more scrolling wall-of-text.</p>
+            </div>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 # ---- Sidebar: settings & saved debates -------------------------------------
@@ -130,25 +183,31 @@ council: List[BaseAgent] = st.session_state.council
 # ---- Debate prompt input ----------------------------------------------------
 
 
-st.subheader("Debate topic")
+st.markdown("### Debate setup")
+setup_left, setup_right = st.columns([3, 2])
 
-prompt = st.text_area(
-    "Enter the debate prompt / question",
-    placeholder=(
-        "Example: To what extent did British colonial policy shape "
-        "modern India's economic structure and regional inequalities?"
-    ),
-    height=100,
-)
+with setup_left:
+    prompt = st.text_area(
+        "Enter the debate prompt / question",
+        placeholder=(
+            "Example: To what extent did British colonial policy shape "
+            "modern India's economic structure and regional inequalities?"
+        ),
+        height=120,
+    )
 
-constraints = st.text_input(
-    "Optional constraints / scope (e.g. 'focus on post-1947, avoid moral verdicts')",
-    value="Be historically grounded, avoid slogans, focus on mechanisms and evidence.",
-)
+with setup_right:
+    constraints = st.text_area(
+        "Optional constraints / scope",
+        value="Be historically grounded, avoid slogans, focus on mechanisms and evidence.",
+        height=120,
+        help="Narrow the lens so experts don't wander: timeframes, evidence types, or red-lines.",
+    )
 
 start_button = st.button(
     "🔥 Start Live Debate",
     type="primary",
+    use_container_width=True,
     disabled=not bool(prompt.strip()),
 )
 
@@ -166,34 +225,100 @@ def build_expert_layout(council: List[BaseAgent]):
     """
     images = _role_to_image_path()
     text_placeholders: Dict[str, st.delta_generator.DeltaGenerator] = {}
+    cols = st.columns(2)
+    for idx, agent in enumerate(council):
+        with cols[idx % 2]:
+            with st.container():
+                st.markdown('<div class="expert-card">', unsafe_allow_html=True)
 
-    for agent in council:
-        # one full-width section per expert
-        with st.container(border=True):
-            col1, col2 = st.columns([1, 3])
-
-            with col1:
                 img_path = images.get(agent.role_id)
                 if img_path and img_path.exists():
                     st.image(str(img_path), use_column_width=True)
                 else:
                     st.write("🔲 (image missing)")
 
-            with col2:
-                st.markdown(f"### {agent.name}")
+                st.markdown(f"<h3>{agent.name}</h3>", unsafe_allow_html=True)
                 st.caption(f"Role ID: `{agent.role_id}`")
 
                 # Placeholder where we'll render the live text
                 text_placeholders[agent.role_id] = st.empty()
 
-        # small gap between experts
-        st.markdown("---")
+                st.markdown('</div>', unsafe_allow_html=True)
 
     return text_placeholders
 
 
-st.markdown("### Live Debate")
-expert_placeholders = build_expert_layout(council)
+def _render_buffer_in_placeholder(placeholder, buffer: str) -> None:
+    """Render a scrollable box with the expert's text."""
+    placeholder.markdown(
+        f"""
+<div style="
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 0.9rem;
+    border: 1px solid #444;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    max-height: 480px;
+    overflow-y: auto;
+">
+{buffer}
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _stage_label(message: DebateMessage, *, total_agents: int) -> str:
+    if message.stage == DebateStage.OPENING:
+        return f"Opening statement #{message.round_index + 1}"
+
+    opening_count = total_agents
+    rebuttal_round = ((message.round_index - opening_count) // total_agents) + 1
+    rebuttal_turn = (message.round_index - opening_count) % total_agents + 1
+    return f"Rebuttal round {rebuttal_round}, turn {rebuttal_turn}"
+
+
+def _render_timeline(
+    placeholder: st.delta_generator.DeltaGenerator,
+    messages: List[DebateMessage],
+    *,
+    total_agents: int,
+) -> None:
+    cards: List[str] = []
+    for msg in messages:
+        stage_class = "opening" if msg.stage == DebateStage.OPENING else "rebuttal"
+        stage_text = _stage_label(msg, total_agents=total_agents)
+        cards.append(
+            f"""
+            <div class="timeline-card {stage_class}">
+                <div class="timeline-speaker">{msg.speaker_name}</div>
+                <div class="timeline-meta">{stage_text} • Stage: {msg.stage.value.title()}</div>
+                <div style="margin-top:0.35rem; white-space:pre-wrap; line-height:1.5;">{msg.content}</div>
+            </div>
+            """
+        )
+
+    placeholder.markdown(
+        """
+        <div class="timeline-wrapper">
+            {content}
+        </div>
+        """.format(content="".join(cards) or "<p style='color:#94a3b8;'>Waiting for the first opening move…</p>"),
+        unsafe_allow_html=True,
+    )
+
+
+st.markdown("### Debate workspace")
+timeline_tab, experts_tab = st.tabs(["🧭 Debate map", "👥 Expert dashboards"])
+
+with timeline_tab:
+    st.caption("See every turn with stage labels and counters. Scroll inside the map, not the whole page.")
+    timeline_placeholder = st.container()
+    _render_timeline(timeline_placeholder, [], total_agents=len(council))
+
+with experts_tab:
+    expert_placeholders = build_expert_layout(council)
 
 status_placeholder = st.empty()
 consensus_placeholder = st.container()
@@ -270,30 +395,10 @@ Task:
     return messages
 
 
-def _render_buffer_in_placeholder(placeholder, buffer: str) -> None:
-    """Render a scrollable box with the expert's text."""
-    placeholder.markdown(
-        f"""
-<div style="
-    white-space: pre-wrap;
-    font-family: monospace;
-    font-size: 0.9rem;
-    border: 1px solid #444;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    max-height: 480px;
-    overflow-y: auto;
-">
-{buffer}
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def run_live_debate(
     topic: DebateTopic,
     num_rebuttal_rounds: int,
+    timeline_placeholder: st.delta_generator.DeltaGenerator,
 ) -> DebateResult:
     """
     Run a full debate with live streaming into the UI.
@@ -307,6 +412,7 @@ def run_live_debate(
 
     transcript = DebateTranscript(topic=topic)
     round_index = 0
+    total_agents = len(council)
 
     # Opening statements
     status_placeholder.info("Opening statements in progress...")
@@ -340,6 +446,11 @@ def run_live_debate(
                 stage=DebateStage.OPENING,
                 round_index=round_index,
             )
+        )
+        _render_timeline(
+            timeline_placeholder,
+            transcript.messages,
+            total_agents=total_agents,
         )
         round_index += 1
 
@@ -379,6 +490,11 @@ def run_live_debate(
                     round_index=round_index,
                 )
             )
+            _render_timeline(
+                timeline_placeholder,
+                transcript.messages,
+                total_agents=total_agents,
+            )
             round_index += 1
 
     status_placeholder.info("Generating council consensus...")
@@ -402,6 +518,7 @@ if start_button and prompt.strip():
         result = run_live_debate(
             topic=topic,
             num_rebuttal_rounds=num_rebuttal_rounds,
+            timeline_placeholder=timeline_placeholder,
         )
 
     # Persist in session and to disk
@@ -420,6 +537,11 @@ if start_button and prompt.strip():
 # If we already have a result from a previous run this session, show its consensus
 elif st.session_state.get("latest_result") is not None:
     result: DebateResult = st.session_state.latest_result
+    _render_timeline(
+        timeline_placeholder,
+        result.transcript.messages,
+        total_agents=len(council),
+    )
     with consensus_placeholder:
         st.markdown("### 🧾 Council Consensus (last run)")
         if result.consensus:
