@@ -15,8 +15,6 @@ from typing import Dict, List
 
 import streamlit as st
 
-MAX_CONTEXT_MESSAGES = 6
-
 from council.agents.council_factory import create_council
 from council.agents.base_agent import BaseAgent
 from council.config.settings import get_settings
@@ -227,8 +225,8 @@ def build_conversation_for_agent(
     """
     Create the ChatMessage sequence that will be sent to a given agent.
 
-    IMPORTANT: To stay within Groq's TPM limits, we only send a *window*
-    of recent messages during rebuttal instead of the entire transcript.
+    IMPORTANT: With local models (e.g., Ollama) there is no strict token cap,
+    so we include the full transcript for rebuttals.
     """
     messages: List[ChatMessage] = []
 
@@ -263,10 +261,8 @@ Task:
     messages.append(ChatMessage(role="user", content=intro))
 
     if stage == DebateStage.REBUTTAL and transcript_messages:
-        # Only include a sliding window of the most recent messages
-        recent = transcript_messages[-MAX_CONTEXT_MESSAGES:]
-
-        for msg in recent:
+        # Include the full transcript for maximum context
+        for msg in transcript_messages:
             label = f"{msg.speaker_name} ({msg.stage.value}, #{msg.round_index})"
             content = f"{label}:\n{msg.content}"
             messages.append(ChatMessage(role="assistant", content=content))
@@ -285,7 +281,7 @@ def _render_buffer_in_placeholder(placeholder, buffer: str) -> None:
     border: 1px solid #444;
     padding: 0.5rem;
     border-radius: 0.5rem;
-    max-height: 260px;
+    max-height: 480px;
     overflow-y: auto;
 ">
 {buffer}
