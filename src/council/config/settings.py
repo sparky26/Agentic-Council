@@ -17,7 +17,7 @@ class ModelConfig:
     This is intentionally generic so it can be used for Ollama-hosted models or others.
     """
     name: str
-    max_completion_tokens: Optional[int] = None
+    max_completion_tokens: int = 1024
     temperature: float = 0.7
     top_p: float = 1.0
     reasoning_effort: Optional[str] = None  # e.g. "medium"
@@ -67,6 +67,7 @@ class Settings:
             # High-capacity, long outputs model:
             "gpt_oss_latest": ModelConfig(
                 name="gpt-oss:latest",
+                max_completion_tokens=1024,
                 temperature=1.0,
                 top_p=1.0,
                 stream=True,

@@ -72,10 +72,8 @@ class OllamaLLMClient(LLMClient):
         options: Dict[str, Any] = {
             "temperature": cfg.temperature,
             "top_p": cfg.top_p,
+            "num_predict": cfg.max_completion_tokens,
         }
-
-        if cfg.max_completion_tokens is not None:
-            options["num_predict"] = cfg.max_completion_tokens
 
         payload: Dict[str, Any] = {
             "model": cfg.name,
@@ -91,17 +89,9 @@ class OllamaLLMClient(LLMClient):
         if "top_p" in override_copy:
             options["top_p"] = override_copy.pop("top_p")
         if "max_completion_tokens" in override_copy:
-            override_value = override_copy.pop("max_completion_tokens")
-            if override_value is None:
-                options.pop("num_predict", None)
-            else:
-                options["num_predict"] = override_value
+            options["num_predict"] = override_copy.pop("max_completion_tokens")
         if "num_predict" in override_copy:
-            override_value = override_copy.pop("num_predict")
-            if override_value is None:
-                options.pop("num_predict", None)
-            else:
-                options["num_predict"] = override_value
+            options["num_predict"] = override_copy.pop("num_predict")
         if force_stream is None and "stream" in override_copy:
             payload["stream"] = override_copy.pop("stream")
         if "options" in override_copy:

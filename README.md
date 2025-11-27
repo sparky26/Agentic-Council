@@ -138,7 +138,8 @@ including:
 To avoid overrunning context limits:
 - Sliding-window transcripts
 - Truncated consensus transcript
-- Optional model-specific token budgeting
+- Lower `max_completion_tokens`
+- Model-specific token budgeting
 
 ---
 
