@@ -17,13 +17,13 @@ class ChatMessage:
     content: str
 
 
-    class LLMClient(ABC):
-        """
-        Abstract interface for any chat-based LLM client.
+class LLMClient(ABC):
+    """
+    Abstract interface for any chat-based LLM client.
 
-        Agents and orchestrators should depend on this interface, not on
-        provider-specific SDKs.
-        """
+    Agents and orchestrators should depend on this interface, not on
+    provider-specific SDKs.
+    """
 
     @abstractmethod
     def complete(
