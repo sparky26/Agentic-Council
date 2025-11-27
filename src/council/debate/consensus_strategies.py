@@ -55,53 +55,19 @@ class PolicyLeadConsensusStrategy(ConsensusStrategy):
                 return agent
         return council[0]
 
-    def _format_transcript(self, transcript: List[DebateMessage], max_chars: int = 6000) -> str:
+    def _format_transcript(self, transcript: List[DebateMessage]) -> str:
         """
-        Convert transcript into a compact, readable text block.
+        Convert the full transcript into a readable text block.
 
-        We include stage, speaker name, and content, but truncate to at most
-        `max_chars` characters to avoid exceeding model limits.
+        With local models and relaxed token limits, we no longer truncate.
         """
         lines: List[str] = []
-        total_chars = 0
-
-        # We keep only the *end* of the debate if it gets too long,
-        # since that's usually the most relevant for consensus.
-        # So we iterate from the end backwards, then reverse at the end.
-        reversed_msgs = list(reversed(transcript))
-        kept_lines: List[str] = []
-
-        for msg in reversed_msgs:
+        for msg in transcript:
             stage = msg.stage.value.upper()
-            chunk = []
-            chunk.append(f"[{msg.round_index} | {stage} | {msg.speaker_name}]")
-            chunk.append(msg.content.strip())
-            chunk.append("-" * 40)
-
-            block = "\n".join(chunk) + "\n"
-            block_len = len(block)
-
-            if total_chars + block_len > max_chars:
-                # Stop if adding this block would exceed our limit
-                break
-
-            kept_lines.append(block)
-            total_chars += block_len
-
-        # We built from the end backwards; reverse back to chronological order.
-        kept_lines.reverse()
-
-        result = "".join(kept_lines)
-        if len(transcript) > len(kept_lines):
-            # Add a small note that some earlier parts were omitted
-            note = (
-                "\n[Earlier parts of the debate have been omitted from this "
-                "transcript for brevity and token limits. Focus on the "
-                "arguments you see here and be explicit about uncertainty.]\n\n"
-            )
-            result = note + result
-
-        return result
+            lines.append(f"[{msg.round_index} | {stage} | {msg.speaker_name}]")
+            lines.append(msg.content.strip())
+            lines.append("-" * 40)
+        return "\n".join(lines)
 
     def generate_consensus(
         self,
